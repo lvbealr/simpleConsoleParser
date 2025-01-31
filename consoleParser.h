@@ -17,18 +17,20 @@
     ptr = NULL;      \
 }
 
-#define CREATE_OPTION(optionsBuffer, flagName, hasArgValue, shortName, flagValue) { \
-  customWarning(optionsCount < MAX_OPTIONS_COUNT, (void) 1);                        \
-                                                                                    \
-  optionsBuffer[optionsCount].name    = flagName;                                   \
-  optionsBuffer[optionsCount].has_arg = hasArgValue;                                \
-  optionsBuffer[optionsCount].val     = shortName;                                  \
-  optionsBuffer[optionsCount].flag    = flagValue;                                  \
-                                                                                    \
-  optionsCount++;                                                                   \
-}                                                                                   \
+#define CREATE_OPTION(optionsBuffer, flagName, hasArgValue, shortName, flagValue)        { \
+  customWarning(optionsCount < MAX_OPTIONS_COUNT, parseError::MAX_OPTIONS_NUMBER_REACHED); \
+                                                                                           \
+  optionsBuffer[optionsCount].name    = flagName;                                          \
+  optionsBuffer[optionsCount].has_arg = hasArgValue;                                       \
+  optionsBuffer[optionsCount].val     = shortName;                                         \
+  optionsBuffer[optionsCount].flag    = flagValue;                                         \
+                                                                                           \
+  optionsCount++;                                                                          \
+}                                                                                          \
 
-#define INITIALIZE_OPTION_LIST() {}
+#define INITIALIZE_OPTION_LIST() {                   \
+    CREATE_OPTION(options, "dumpFolder", 2, 'd', 0); \
+}
 
 #ifndef _NDEBUG
   #define PRINT_OPTION() printf("Option: [-%c]\t %s\n", gotOption, optarg)
@@ -36,30 +38,44 @@
     #define PRINT_OPTION()
 #endif // _NDEBUG
 
-struct _OPTIONS_ {};
+struct _OPTIONS_ {
+    char *dumpFolderName = {};
+};
 
 enum class parseError {
-    NO_MORE_OPTIONS = -1,
-    NO_ERRORS       =  0,
-    CALLOC_ERROR    =  1
+    NO_MORE_OPTIONS            = -1,
+    NO_ERRORS                  =  0,
+    CALLOC_ERROR               =  1,
+    MAX_OPTIONS_NUMBER_REACHED =  2
 };
 
 static const size_t MAX_OPTIONS_COUNT  = 1;
 
 static _OPTIONS_ __OPTIONS_DATA__ = {};
 
+static const char *DEFAULT_DUMP_FOLDER_NAME = "dumpFolder";
+
 parseError __OPTIONS_DATA_INITIALIZE__() {
+    __OPTIONS_DATA__.dumpFolderName = (char *)calloc(MAX_DUMP_FOLDER_NAME, sizeof(char));
+    customWarning(__OPTIONS_DATA__.dumpFolderName != NULL, parseError::CALLOC_ERROR);
+
     return parseError::NO_ERRORS;
 }
 
 parseError __OPTIONS_DATA_DESTRUCT__() {
+    FREE_(__OPTIONS_DATA__.dumpFolderName);
+
     return parseError::NO_ERRORS;
 }
 
 parseError parseConsole(int argc, char *argv[]) {
     size_t optionsCount                 = 0;
     option options[MAX_OPTIONS_COUNT]   = {};
-    const char *optString               = "";
+    const char *optString               = "d:";
+
+    // INITIALIZE BY DEFAULT VALUES //
+    strncpy(__OPTIONS_DATA__.dumpFolderName, DEFAULT_DUMP_FOLDER_NAME, MAX_DUMP_FOLDER_NAME);
+    // INITIALIZE BY DEFAULT VALUES //
 
     INITIALIZE_OPTION_LIST();
 
@@ -70,6 +86,12 @@ parseError parseConsole(int argc, char *argv[]) {
         PRINT_OPTION();
 
         switch (gotOption) {
+            case 'd': {
+                __OPTIONS_DATA__.dumpFolderName = {};
+                strncpy(__OPTIONS_DATA__.dumpFolderName, optarg, MAX_DUMP_FOLDER_NAME);
+                break;
+            }
+
             default:
                 break;
         }
