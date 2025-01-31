@@ -87,7 +87,7 @@ parseError parseConsole(int argc, char *argv[]) {
 
         switch (gotOption) {
             case 'd': {
-                __OPTIONS_DATA__.dumpFolderName = {};
+                memset(__OPTIONS_DATA__.dumpFolderName, 0, MAX_DUMP_FOLDER_NAME);
                 strncpy(__OPTIONS_DATA__.dumpFolderName, optarg, MAX_DUMP_FOLDER_NAME);
                 break;
             }
