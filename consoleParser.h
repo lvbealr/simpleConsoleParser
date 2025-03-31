@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "customWarning.h"
 
@@ -18,7 +19,7 @@
 }
 
 #define CREATE_OPTION(optionsBuffer, flagName, hasArgValue, shortName, flagValue) { \
-  customWarning(optionsCount < MAX_OPTIONS_COUNT, (void) 1);                        \
+  customWarning(optionsCount < MAX_OPTIONS_COUNT, parseError::NO_MORE_OPTIONS);     \
                                                                                     \
   optionsBuffer[optionsCount].name    = flagName;                                   \
   optionsBuffer[optionsCount].has_arg = hasArgValue;                                \
@@ -26,9 +27,12 @@
   optionsBuffer[optionsCount].flag    = flagValue;                                  \
                                                                                     \
   optionsCount++;                                                                   \
-}                                                                                   \
+}
 
-#define INITIALIZE_OPTION_LIST() {}
+#define INITIALIZE_OPTION_LIST() {                 \
+    CREATE_OPTION(options, "count", 2, 'c', 0);    \
+    CREATE_OPTION(options, "maxValue", 2, 'm', 0); \
+}
 
 #ifndef _NDEBUG
   #define PRINT_OPTION() printf("Option: [-%c]\t %s\n", gotOption, optarg)
@@ -36,7 +40,10 @@
     #define PRINT_OPTION()
 #endif // _NDEBUG
 
-struct _OPTIONS_ {};
+struct _OPTIONS_ {
+    size_t elementsCount;
+    uint32_t maxValue;
+};
 
 enum class parseError {
     NO_MORE_OPTIONS = -1,
@@ -44,19 +51,25 @@ enum class parseError {
     CALLOC_ERROR    =  1
 };
 
-static const size_t MAX_OPTIONS_COUNT  = 1;
+static const size_t MAX_OPTIONS_COUNT = 2;
 
 static _OPTIONS_ __OPTIONS_DATA__ = {};
 
-parseError __OPTIONS_DATA_INITIALIZE__() {
+static parseError __OPTIONS_DATA_INITIALIZE__() {
+    __OPTIONS_DATA__.elementsCount = {};
+    __OPTIONS_DATA__.maxValue      = {};
+
     return parseError::NO_ERRORS;
 }
 
-parseError __OPTIONS_DATA_DESTRUCT__() {
+static parseError __OPTIONS_DATA_DESTRUCT__() {
+    __OPTIONS_DATA__.elementsCount = {};
+    __OPTIONS_DATA__.maxValue      = {};
+
     return parseError::NO_ERRORS;
 }
 
-parseError parseConsole(int argc, char *argv[]) {
+static parseError parseConsole(int argc, char *argv[]) {
     size_t optionsCount                 = 0;
     option options[MAX_OPTIONS_COUNT]   = {};
     const char *optString               = "";
@@ -70,6 +83,16 @@ parseError parseConsole(int argc, char *argv[]) {
         PRINT_OPTION();
 
         switch (gotOption) {
+        	case 'c': {
+            	__OPTIONS_DATA__.elementsCount = strtoul(optarg, NULL, 10);
+                break;
+            }
+
+            case 'm': {
+              	__OPTIONS_DATA__.maxValue = strtoul(optarg, NULL, 10);
+                break;
+            }
+
             default:
                 break;
         }
